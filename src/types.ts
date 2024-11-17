@@ -14,9 +14,7 @@ type SchemaObject = {
 };
 
 type Operation = {
-	summary?: string;
 	operationId?: string;
-	tags?: string[];
 	responses: {
 		[status: string]: {
 			description: string;
@@ -52,7 +50,7 @@ type ObjectType = {
 	title?: string;
 };
 
-export interface OpenAPI {
+export interface SpoonOpenAPI {
 	openapi: string;
 	info: {
 		title: string;

@@ -1,25 +1,25 @@
-import * as OpenAPISpec from "../openapi.json";
-import type { OpenAPI } from "./types";
-
-function fun(spec: OpenAPI) {
-	return "hello";
-}
-
-fun(OpenAPISpec as OpenAPI);
+import type * as OpenAPISpec from "../openapi.json";
+import { extractMethod } from "./helpers";
+import type { SpoonOpenAPI } from "./types";
 
 const createProxy = (domain: string, path = "") => {
 	return new Proxy(() => {}, {
 		get(target, key) {
 			return createProxy(domain, `${path}/${key.toString()}`);
 		},
-		apply(target, thisArg, args) {
-			// eventually this will make the network request
-			console.log(target, thisArg, args, path);
+		apply: async (target, thisArg, args) => {
+			// assuming only gets for now
+			const { method, path: newPath } = extractMethod(path);
+			const result = await fetch(`${domain}/${newPath}`, {
+				method,
+				body: JSON.stringify({ hello: "world" }),
+			});
+			return result.json();
 		},
 	});
 };
 
-const spoon = (domain: string) =>
+const spoon = <T extends SpoonOpenAPI>(domain: string): T =>
 	new Proxy(
 		{},
 		{
@@ -27,8 +27,9 @@ const spoon = (domain: string) =>
 				return createProxy(domain, key as string);
 			},
 		},
-	);
+	) as T;
 
-const app = spoon("https://api.example.com");
+const app = spoon<typeof OpenAPISpec>("localhost:3000");
 
-app.get.hello.sandwich.get();
+const result = await app.mirror.post();
+console.log(result);
