@@ -1,7 +1,3 @@
-// export function composePath(path: string) {
-// 	return path.replaceAll("{", "").replaceAll("}", "");
-// }
-
 export function extractMethod(path: string) {
 	// paths look like /foo/bar/get
 	// where the last element is the HTTP method
