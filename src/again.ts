@@ -8,22 +8,10 @@ type ExamplePaths = {
 };
 
 type Create<Spec extends ExamplePaths> = Spec extends {
-	paths: infer Schema extends Record<string, unknown>;
+	paths: infer Paths extends Record<string, unknown>;
 }
-	? Prettify<Sign4<Schema>>
+	? Sign4<Paths>
 	: "Fail";
-
-type Function = (...args: any[]) => any;
-
-type PathParameter = `{${string}}`;
-
-type PathKey<Route extends Record<string, any>> = {
-	[K in keyof Route as K extends PathParameter
-		? (string & {}) | K
-		: K]: Route[K] extends Function ? Route[K] : PathKey<Route[K]>;
-};
-
-type TestPath = PathKey<(typeof examplePaths)["paths"]>;
 
 /*
 Considering this object: {
@@ -120,9 +108,17 @@ type Sign4<
 								: never]: K extends `${string}/${infer Rest}`
 				? Sign4<CurrentSchema, CompletePath, Rest>
 				: K extends `${infer SinglePathSegment}`
-					? Sign4<CurrentSchema[SinglePathSegment], CompletePath>
-					: K extends `{$infer PathParameter}`
-						? Sign4<CurrentSchema[`{$PathParameter}`], CompletePath>
+					? Sign4<
+							CurrentSchema[SinglePathSegment],
+							CompletePath,
+							SinglePathSegment
+						>
+					: K extends `{${infer PathParameter}}`
+						? Sign4<
+								CurrentSchema[`{${PathParameter}}`],
+								CompletePath,
+								PathParameter
+							>
 						: CurrentSchema[K];
 		};
 
