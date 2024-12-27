@@ -78,9 +78,25 @@ type HttpMethods = "get" | "post";
 
 type BaseSchema = Record<string, any>;
 
-type Split<T extends string> = T extends `${infer First}/${infer Rest}`
+type ExtractFirst<T extends string> = T extends `${infer First}/${infer Rest}`
 	? [First, Rest]
 	: [T];
+
+type StartsWith<
+	Str extends string,
+	Prefix extends string,
+> = Str extends `${Prefix}/${string}` ? true : false;
+
+type GetPathsWithPrefix<Schema extends BaseSchema, Prefix extends string> = {
+	[K in keyof Schema as StartsWith<K & string, Prefix> extends true
+		? K
+		: never]: Schema[K];
+};
+
+type TestGetPathsWithPrefix = GetPathsWithPrefix<
+	(typeof examplePaths)["paths"],
+	"store"
+>;
 
 type Sign4<
 	CurrentSchema extends BaseSchema,
@@ -88,10 +104,10 @@ type Sign4<
 	CurrentPath extends string = "",
 > = CurrentPath extends `${string}/${string}`
 	? {
-			[K in Split<CurrentPath>[0]]: Sign4<
+			[K in ExtractFirst<ExtractFirst<CurrentPath>[1]>[0]]: Sign4<
 				CurrentSchema,
 				CompletePath,
-				Split<CurrentPath>[1]
+				ExtractFirst<ExtractFirst<CurrentPath>[1]>[1] & string
 			>;
 		}
 	: {
@@ -106,14 +122,14 @@ type Sign4<
 							: K extends "/" | ""
 								? "index"
 								: never]: K extends `${string}/${infer Rest}`
-				? Sign4<CurrentSchema, CompletePath, Rest>
+				? Sign4<CurrentSchema, K, Rest>
 				: K extends `${infer SinglePathSegment}`
 					? Sign4<
 							CurrentSchema[SinglePathSegment],
 							CompletePath,
 							SinglePathSegment
 						>
-					: K extends `{${infer PathParameter}}`
+					: K extends `${infer PathParameter}`
 						? Sign4<
 								CurrentSchema[`{${PathParameter}}`],
 								CompletePath,
@@ -127,7 +143,7 @@ type Test = Sign4<(typeof examplePaths)["paths"]>;
 const createProxy = (domain: string, path = "") => {
 	return new Proxy(() => {}, {
 		get(target, key) {
-			return createProxy(domain, `${path}/${key.toString()}`);
+			return createProxy(domain, `$path/${key.toString()}`);
 		},
 		apply: async (target, thisArg, args): Promise<Record<string, any>> => {
 			const { method, path: newPath } = extractMethod(path);
